@@ -6,6 +6,7 @@
     <title>Omni Checklist Hub</title>
     
     <!-- PWA, SEO & Mobile Meta -->
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Omni Checklist">
@@ -13,24 +14,7 @@
     <meta name="description" content="Omni Technologies Device Checklist Hub for fire-alarm inspections.">
     <meta name="theme-color" content="#0f172a">
     <link rel="apple-touch-icon" href="https://placehold.co/180x180/0ea5e9/ffffff?text=Omni">
-    <link rel="manifest" href="data:application/manifest+json,{
-        &quot;name&quot;: &quot;Omni Checklist Hub&quot;,
-        &quot;short_name&quot;: &quot;OmniCheck&quot;,
-        &quot;start_url&quot;: &quot;.&quot;,
-        &quot;display&quot;: &quot;standalone&quot;,
-        &quot;background_color&quot;: &quot;#0f172a&quot;,
-        &quot;theme_color&quot;: &quot;#0ea5e9&quot;,
-        &quot;description&quot;: &quot;A checklist application for Omni inspectors.&quot;,
-        &quot;icons&quot;: [{
-            &quot;src&quot;: &quot;https://placehold.co/192x192/0ea5e9/ffffff?text=Omni&quot;,
-            &quot;sizes&quot;: &quot;192x192&quot;,
-            &quot;type&quot;: &quot;image/png&quot;
-        }, {
-            &quot;src&quot;: &quot;https://placehold.co/512x512/0ea5e9/ffffff?text=Omni&quot;,
-            &quot;sizes&quot;: &quot;512x512&quot;,
-            &quot;type&quot;: &quot;image/png&quot;
-        }]
-    }">
+    <link rel="manifest" href="data:application/json;charset=utf-8,{%22name%22:%22Omni%20Checklist%20Hub%22,%22short_name%22:%22OmniCheck%22,%22start_url%22:%22.%22,%22display%22:%22standalone%22,%22background_color%22:%22%230f172a%22,%22theme_color%22:%22%230ea5e9%22,%22description%22:%22A%20checklist%20application%20for%20Omni%20inspectors.%22,%22icons%22:[{%22src%22:%22https://placehold.co/192x192/0ea5e9/ffffff?text=Omni%22,%22sizes%22:%22192x192%22,%22type%22:%22image/png%22},{%22src%22:%22https://placehold.co/512x512/0ea5e9/ffffff?text=Omni%22,%22sizes%22:%22512x512%22,%22type%22:%22image/png%22}]}">
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -196,10 +180,10 @@
         // --- App State ---
         // ===================================================================================
         const AppState = {
-            checklists: [], // This will be populated from checklists.json
+            checklists: [], 
             activeChecklistKey: null,
             activeChecklistData: null,
-            fetchError: null // NEW: To store any fetching errors
+            fetchError: null
         };
 
         // --- UTILITIES ---
@@ -223,9 +207,6 @@
             return p.innerHTML;
         }
 
-        /**
-         * Normalizes device data from different sources into a consistent format.
-         */
         function normalizeDevice(device) {
             const isExcelFormat = device.hasOwnProperty('System Address ( Node : Card : Device )');
             if (isExcelFormat) {
@@ -242,7 +223,6 @@
                     messages: (device['Location Text'] || '').replace(/\n/g, ' '),
                 };
             } else {
-                // This assumes the original format you had
                 return {
                     loop: device.loop || '',
                     address: device.address || '',
@@ -256,9 +236,6 @@
             }
         }
 
-        /**
-         * Shows a temporary notification toast.
-         */
         function showToast(message, type = 'info') {
             const container = $('#toast-container');
             if (!container) return;
@@ -322,7 +299,6 @@
 
         // --- WEB COMPONENTS ---
         
-        // --- BuildingPicker Web Component ---
         class BuildingPicker extends HTMLElement {
             constructor() {
                 super();
@@ -335,7 +311,7 @@
 
             setChecklists(checklists, error = null) {
                 this.checklists = checklists;
-                this.error = error; // NEW: Accept an error message
+                this.error = error;
                 this.render();
             }
 
@@ -435,8 +411,6 @@
         }
         customElements.define('building-picker', BuildingPicker);
         
-        
-        // --- ChecklistWorkspace Web Component ---
         class ChecklistWorkspace extends HTMLElement {
             constructor() {
                 super();
@@ -476,18 +450,25 @@
                 try {
                     const checklistMeta = AppState.checklists.find(c => c.key === this.checklistKey);
                     if (!checklistMeta || !checklistMeta.filePath) {
-                        throw new Error("Checklist metadata not found or file path is missing.");
+                        throw new Error("Checklist metadata not found or file path is missing in checklists.json.");
                     }
                     
-                    // MODIFIED: Added cache-busting parameter
-                    const cacheBuster = `v=${Date.now()}`;
-                    const response = await fetch(`${checklistMeta.filePath}?${cacheBuster}`);
+                    const fetchUrl = `${checklistMeta.filePath}?v=${Date.now()}`;
                     
-                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                    // --- NEW DEBUGGING LOG ---
+                    console.log(`Attempting to fetch device list from: ${fetchUrl}`);
+                    
+                    const response = await fetch(fetchUrl);
+
+                    console.log(`Response for ${fetchUrl}:`, response);
+                    if (!response.ok) {
+                        throw new Error(`Failed to load ${checklistMeta.filePath}. Server responded with status: ${response.status} ${response.statusText}`);
+                    }
                     
                     const deviceData = await response.json();
 
                     const devices = Array.isArray(deviceData) ? deviceData : (deviceData.devices || []);
+                    console.log(`Successfully parsed ${devices.length} devices from ${checklistMeta.filePath}`);
 
                     AppState.activeChecklistData = {
                         ...checklistMeta,
@@ -546,8 +527,6 @@
                 return `
                     <div class="space-y-4">
                         <div id="progress-container"></div>
-                        
-                        <!-- Search and Sort Controls -->
                         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-2 sm:p-0">
                             <div class="flex-grow">
                                 <label for="search-input" class="sr-only">Search Devices</label>
@@ -567,7 +546,6 @@
                                 </select>
                             </div>
                         </div>
-
                         <div id="completed-container"></div>
                         <div id="active-container"></div>
                     </div>
@@ -643,17 +621,6 @@
                         </div>
                     </div>
                 `;
-            }
-
-            getSortIcon(key) {
-                if (this.sortState.key !== key) {
-                    return `<svg class="sort-icon inline-block w-4 h-4 ml-1 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l4-4 4 4m0 6l-4 4-4-4"></path></svg>`;
-                }
-                if (this.sortState.dir === 'asc') {
-                    return `<svg class="sort-icon inline-block w-4 h-4 ml-1" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M14.707 12.707a1 1 0 01-1.414 0L10 9.414l-3.293 3.293a1 1 0 01-1.414-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 010 1.414z" clip-rule="evenodd"></path></svg>`;
-                } else {
-                    return `<svg class="sort-icon inline-block w-4 h-4 ml-1" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"></path></svg>`;
-                }
             }
             
             renderListHTML(devices, showHeader = true) {
@@ -900,13 +867,12 @@
 
         // --- APP INITIALIZATION ---
         async function initializeApp() {
-            // Setup Building Pickers
+            // Setup UI
             const mobilePickerContainer = $('#mobile-building-picker-container');
             const desktopPickerContainer = $('#desktop-building-picker-container');
             mobilePickerContainer.appendChild(document.createElement('building-picker'));
             desktopPickerContainer.appendChild(document.createElement('building-picker'));
             
-            // Handle Checklist Selection
             document.addEventListener('checklist-selected', (e) => {
                 const { key } = e.detail;
                 AppState.activeChecklistKey = key;
@@ -928,22 +894,15 @@
             const menuContainer = $('#header-menu-container');
             const menuButton = $('#menu-toggle-button');
             const menuDropdown = $('#menu-dropdown');
-            
             menuContainer.classList.add('invisible', 'opacity-50');
             menuButton.disabled = true;
-
             function toggleMenu(show) {
                 const isVisible = !menuDropdown.classList.contains('hidden');
                 if (typeof show !== 'boolean') show = !isVisible;
                 menuDropdown.classList.toggle('hidden', !show);
                 menuButton.setAttribute('aria-expanded', show);
             }
-
-            menuButton.addEventListener('click', (e) => {
-                e.stopPropagation();
-                toggleMenu();
-            });
-
+            menuButton.addEventListener('click', (e) => { e.stopPropagation(); toggleMenu(); });
             menuDropdown.addEventListener('click', (e) => {
                 const action = e.target.closest('[data-menu-action]')?.dataset.menuAction;
                 if (action) {
@@ -952,36 +911,22 @@
                     toggleMenu(false);
                 }
             });
-
-            window.addEventListener('click', (e) => {
-                if (!menuContainer.contains(e.target)) toggleMenu(false);
-            });
-            window.addEventListener('keydown', (e) => {
-                if (e.key === 'Escape' && !menuDropdown.classList.contains('hidden')) toggleMenu(false);
-            });
+            window.addEventListener('click', (e) => { if (!menuContainer.contains(e.target)) toggleMenu(false); });
+            window.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !menuDropdown.classList.contains('hidden')) toggleMenu(false); });
 
             // --- DATA FETCHING ---
             console.log("Starting application initialization...");
             try {
-                // MODIFIED: Added cache-busting parameter
-                const cacheBuster = `v=${Date.now()}`;
-                console.log("Attempting to fetch checklists.json...");
-                const response = await fetch(`checklists.json?${cacheBuster}`);
-                
-                console.log("Fetch response received. Status:", response.status, response.statusText);
+                const response = await fetch(`checklists.json?v=${Date.now()}`);
                 if (!response.ok) {
-                    throw new Error(`Could not load checklists.json. Server responded with ${response.status}. Make sure the file exists and the path is correct.`);
+                    throw new Error(`Could not load checklists.json. Server responded with ${response.status}. Check that the file exists and the name is correct.`);
                 }
-                
                 AppState.checklists = await response.json();
                 console.log("Successfully fetched and parsed checklists.json:", AppState.checklists);
-                
                 $$('building-picker').forEach(picker => picker.setChecklists(AppState.checklists));
-
             } catch(error) {
                 console.error("Initialization Error:", error);
-                AppState.fetchError = error.message; // Store the error message
-                // Update the UI to show the error
+                AppState.fetchError = error.message;
                 $$('building-picker').forEach(picker => picker.setChecklists([], AppState.fetchError));
                 const errorDiv = $('#loading-error-message');
                 if(errorDiv) {
