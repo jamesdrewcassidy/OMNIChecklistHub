@@ -3,12 +3,12 @@
     "key": "mcfarland_psc",
     "name": "McFarland Public Safety Center",
     "location": "Fire Alarm Device Inspection",
-    "filePath": "./mcfarland_psc.json"
+    "filePath": "mcfarland_psc.json"
   },
   {
     "key": "purina_facility",
     "name": "Purina Facility",
     "location": "Device List Report",
-    "filePath": "./purina_facility.json"
+    "filePath": "purina_facility.json"
   }
 ]
