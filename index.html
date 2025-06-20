@@ -199,7 +199,7 @@
             checklists: [], // This will be populated from checklists.json
             activeChecklistKey: null,
             activeChecklistData: null,
-            repoName: 'OMNIChecklistHub' // CHANGE THIS to your actual repository name
+            // REMOVED: repoName is no longer needed. We will use relative paths.
         };
 
         // --- UTILITIES ---
@@ -464,7 +464,9 @@
                         throw new Error("Checklist metadata not found or file path is missing.");
                     }
 
-                    const response = await fetch(`/${AppState.repoName}/${checklistMeta.filePath}`);
+                    // MODIFIED: Use a relative path to fetch the checklist JSON file.
+                    // This is more robust and works on GitHub Pages without configuration.
+                    const response = await fetch(checklistMeta.filePath);
                     if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
                     
                     const deviceData = await response.json();
@@ -945,7 +947,9 @@
 
             // --- DATA FETCHING ---
             try {
-                const response = await fetch(`/${AppState.repoName}/checklists.json`);
+                // MODIFIED: Use a relative path to fetch checklists.json.
+                // This will work locally and on GitHub pages without any changes.
+                const response = await fetch('checklists.json');
                 if (!response.ok) {
                     throw new Error(`Could not load checklists.json (Status: ${response.status})`);
                 }
@@ -956,7 +960,7 @@
             } catch(error) {
                 console.error("Initialization Error:", error);
                 const errorDiv = $('#loading-error-message');
-                errorDiv.textContent = `Error: ${error.message}. Please ensure 'checklists.json' exists and is correctly formatted.`;
+                errorDiv.textContent = `Error: ${error.message}. Please ensure 'checklists.json' and your other data files are in the same directory as index.html and have been pushed to your GitHub repository.`;
                 errorDiv.classList.remove('hidden');
             }
         }
