@@ -199,6 +199,7 @@
             checklists: [], // This will be populated from checklists.json
             activeChecklistKey: null,
             activeChecklistData: null,
+            repoName: 'OMNIChecklistHub' // CHANGE THIS to your actual repository name
         };
 
         // --- UTILITIES ---
@@ -463,7 +464,7 @@
                         throw new Error("Checklist metadata not found or file path is missing.");
                     }
 
-                    const response = await fetch(checklistMeta.filePath);
+                    const response = await fetch(`/${AppState.repoName}/${checklistMeta.filePath}`);
                     if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
                     
                     const deviceData = await response.json();
@@ -944,25 +945,7 @@
 
             // --- DATA FETCHING ---
             try {
-                // In your GitHub repo, create a `checklists.json` file in the same directory as your index.html
-                // It should look like this:
-                // [
-                //   {
-                //     "key": "mcfarland_psc",
-                //     "name": "McFarland Public Safety Center",
-                //     "location": "Fire Alarm Device Inspection",
-                //     "filePath": "./mcfarland_psc.json"
-                //   },
-                //   {
-                //     "key": "purina_facility",
-                //     "name": "Purina Facility",
-                //     "location": "Device List Report",
-                //     "filePath": "./purina_facility.json"
-                //   }
-                // ]
-                // Then create the .json files for each checklist (e.g., mcfarland_psc.json).
-                // The content of that file should be an array of device objects.
-                const response = await fetch('./checklists.json');
+                const response = await fetch(`/${AppState.repoName}/checklists.json`);
                 if (!response.ok) {
                     throw new Error(`Could not load checklists.json (Status: ${response.status})`);
                 }
