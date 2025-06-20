@@ -1,0 +1,985 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Omni Checklist Hub</title>
+    
+    <!-- PWA, SEO & Mobile Meta -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Omni Checklist">
+    <meta name="application-name" content="Omni Checklist">
+    <meta name="description" content="Omni Technologies Device Checklist Hub for fire-alarm inspections.">
+    <meta name="theme-color" content="#0f172a">
+    <link rel="apple-touch-icon" href="https://placehold.co/180x180/0ea5e9/ffffff?text=Omni">
+    <link rel="manifest" href="data:application/manifest+json,{
+        &quot;name&quot;: &quot;Omni Checklist Hub&quot;,
+        &quot;short_name&quot;: &quot;OmniCheck&quot;,
+        &quot;start_url&quot;: &quot;.&quot;,
+        &quot;display&quot;: &quot;standalone&quot;,
+        &quot;background_color&quot;: &quot;#0f172a&quot;,
+        &quot;theme_color&quot;: &quot;#0ea5e9&quot;,
+        &quot;description&quot;: &quot;A checklist application for Omni inspectors.&quot;,
+        &quot;icons&quot;: [{
+            &quot;src&quot;: &quot;https://placehold.co/192x192/0ea5e9/ffffff?text=Omni&quot;,
+            &quot;sizes&quot;: &quot;192x192&quot;,
+            &quot;type&quot;: &quot;image/png&quot;
+        }, {
+            &quot;src&quot;: &quot;https://placehold.co/512x512/0ea5e9/ffffff?text=Omni&quot;,
+            &quot;sizes&quot;: &quot;512x512&quot;,
+            &quot;type&quot;: &quot;image/png&quot;
+        }]
+    }">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        darkMode: 'media', // or 'class'
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['Inter', 'sans-serif'],
+            },
+            colors: {
+              slate: {
+                850: '#17202e',
+                950: '#0f172a',
+              }
+            }
+          }
+        }
+      }
+    </script>
+    
+    <!-- Custom Styles -->
+    <style type="text/css">
+      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap');
+      
+      /* Base styles */
+      body { 
+        font-family: 'Inter', sans-serif;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        padding-bottom: 56px; /* Prevent footer from overlapping content */
+      }
+      
+      /* Custom focus rings for better accessibility */
+      .focus-ring { 
+        @apply focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-950 focus:ring-sky-500; 
+      }
+      
+      /* Arrow rotation for accordion (used for completed devices) */
+      [aria-expanded="true"] .accordion-arrow { transform: rotate(180deg); }
+      
+      /* Styling for sortable table headers */
+      .table-header-sortable:hover { @apply bg-slate-200 dark:bg-slate-700/50; }
+      .table-header-sortable .sort-icon { opacity: 0.3; transition: opacity 0.2s; }
+      .table-header-sortable[aria-sort] .sort-icon { opacity: 1; }
+      
+      /* Visual feedback on check/uncheck */
+      @keyframes flash-sky {
+        0% { background-color: transparent; }
+        50% { background-color: rgba(14, 165, 233, 0.1); }
+        100% { background-color: transparent; }
+      }
+      .flash-bg {
+        animation: flash-sky 0.5s ease-out;
+      }
+      
+      /* Sticky footer styles with blur effect */
+      .sticky-footer {
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        background-color: rgba(248, 250, 252, 0.85); /* light mode bg */
+      }
+      .dark .sticky-footer {
+          background-color: rgba(15, 23, 42, 0.85); /* dark mode bg */
+      }
+    </style>
+</head>
+<body class="bg-slate-100 dark:bg-slate-950 text-slate-800 dark:text-slate-200">
+
+    <div id="app-container" class="relative min-h-screen">
+        
+        <!-- Header -->
+        <header class="bg-white/80 dark:bg-slate-900/80 backdrop-blur-md sticky top-0 z-40 w-full border-b border-slate-200 dark:border-slate-800">
+            <div class="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex items-center justify-between h-16">
+                    <!-- Left Side: Title -->
+                    <div class="flex items-center">
+                        <span class="text-2xl font-bold text-sky-600 dark:text-sky-500">✅</span>
+                        <h1 class="ml-3 text-xl font-bold tracking-tight">Omni Checklist</h1>
+                    </div>
+                    
+                    <!-- Right Side: Hamburger Menu -->
+                    <div id="header-menu-container" class="relative">
+                        <button id="menu-toggle-button" type="button" class="p-2 rounded-md hover:bg-slate-200 dark:hover:bg-slate-700 focus-ring" aria-label="Open options menu" aria-haspopup="true" aria-expanded="false">
+                            <svg class="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+                            </svg>
+                        </button>
+                        
+                        <div id="menu-dropdown" class="hidden absolute right-0 mt-2 w-56 origin-top-right rounded-md bg-white dark:bg-slate-800 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none" role="menu" aria-orientation="vertical" aria-labelledby="menu-toggle-button" tabindex="-1">
+                            <div class="py-1" role="none">
+                                <a href="#" class="text-slate-700 dark:text-slate-200 block px-4 py-2 text-sm hover:bg-slate-100 dark:hover:bg-slate-700" role="menuitem" tabindex="-1" id="menu-undo" data-menu-action="undo">Undo Last Check</a>
+                                <a href="#" class="text-slate-700 dark:text-slate-200 block px-4 py-2 text-sm hover:bg-slate-100 dark:hover:bg-slate-700" role="menuitem" tabindex="-1" id="menu-export" data-menu-action="export">Export Inspected List</a>
+                                <div class="border-t border-slate-200 dark:border-slate-700 my-1"></div>
+                                <a href="#" class="text-red-600 dark:text-red-400 block px-4 py-2 text-sm hover:bg-slate-100 dark:hover:bg-slate-700" role="menuitem" tabindex="-1" id="menu-clear" data-menu-action="clear-all">Clear All Checkmarks...</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                 <!-- Mobile Building Picker (becomes visible via JS) -->
+                <div id="mobile-building-picker-container" class="sm:hidden pb-4"></div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="max-w-screen-2xl mx-auto p-2 sm:p-6 lg:p-8">
+            <div class="flex flex-col sm:flex-row gap-8">
+                <!-- Checklist Workspace -->
+                <div id="checklist-workspace" class="flex-grow">
+                     <div id="welcome-message" class="text-center py-20 px-4">
+                        <h2 class="text-2xl font-semibold text-slate-600 dark:text-slate-400">Welcome, Inspector!</h2>
+                        <p class="mt-2 text-slate-500">Please select a checklist from the list to begin your inspection.</p>
+                        <div id="loading-error-message" class="mt-4 text-red-500 hidden"></div>
+                    </div>
+                </div>
+
+                <!-- Desktop Building Picker Sidebar -->
+                <aside id="desktop-building-picker-container" class="hidden sm:block sm:w-64 md:w-72 lg:w-80 flex-shrink-0">
+                </aside>
+            </div>
+        </main>
+        
+        <!-- Last Checked Footer -->
+        <footer id="last-checked-footer" class="fixed bottom-0 left-0 right-0 p-3 border-t border-slate-200 dark:border-slate-800 sticky-footer z-30 hidden">
+            <div class="max-w-screen-2xl mx-auto text-center px-4 sm:px-6 lg:p-8">
+                <p class="text-sm text-slate-600 dark:text-slate-300 font-medium truncate">
+                    Last Checked: <span id="last-checked-text" class="font-bold text-sky-600 dark:text-sky-500"></span>
+                </p>
+            </div>
+        </footer>
+
+        <!-- Toasts/Notifications Container -->
+        <div id="toast-container" aria-live="assertive" aria-atomic="true" class="fixed bottom-16 right-0 p-4 sm:p-6 space-y-3 z-50 w-full max-w-sm"></div>
+        
+        <!-- Confirmation Modal -->
+        <div id="confirmation-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden items-center justify-center p-4" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+            <div id="confirmation-modal-panel" class="relative transform overflow-hidden rounded-lg bg-white dark:bg-slate-800 text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95">
+                <div class="bg-white dark:bg-slate-800 px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                    <div class="sm:flex sm:items-start">
+                        <div class="mx-auto flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/50 sm:mx-0 sm:h-10 sm:w-10">
+                            <svg class="h-6 w-6 text-red-600 dark:text-red-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"></path></svg>
+                        </div>
+                        <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
+                            <h3 class="text-lg font-semibold leading-6 text-slate-900 dark:text-slate-100" id="modal-title">Confirmation</h3>
+                            <div class="mt-2">
+                                <p class="text-sm text-slate-500 dark:text-slate-400" id="modal-message">Are you sure? This action cannot be undone.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-slate-50 dark:bg-slate-800/50 px-4 py-3 sm:flex sm:flex-row-reverse sm:px-6">
+                    <button type="button" id="modal-confirm-button" class="inline-flex w-full justify-center rounded-md border border-transparent bg-red-600 px-4 py-2 text-base font-medium text-white shadow-sm hover:bg-red-700 focus-ring sm:ml-3 sm:w-auto sm:text-sm">Confirm</button>
+                    <button type="button" id="modal-cancel-button" class="mt-3 inline-flex w-full justify-center rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-4 py-2 text-base font-medium text-slate-700 dark:text-slate-200 shadow-sm hover:bg-slate-50 dark:hover:bg-slate-600 focus-ring sm:mt-0 sm:w-auto sm:text-sm">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Main Application Logic -->
+    <script type="module">
+        // ===================================================================================
+        // --- App State ---
+        // ===================================================================================
+        const AppState = {
+            checklists: [], // This will be populated from checklists.json
+            activeChecklistKey: null,
+            activeChecklistData: null,
+        };
+
+        // --- UTILITIES ---
+        const $ = (selector, parent = document) => parent.querySelector(selector);
+        const $$ = (selector, parent = document) => parent.querySelectorAll(selector);
+
+        function debounce(func, delay = 250) {
+            let timeoutId;
+            return (...args) => {
+                clearTimeout(timeoutId);
+                timeoutId = setTimeout(() => {
+                    func.apply(this, args);
+                }, delay);
+            };
+        }
+
+        function escapeHTML(str) {
+            if (str === null || str === undefined) return '';
+            const p = document.createElement('p');
+            p.textContent = String(str);
+            return p.innerHTML;
+        }
+
+        /**
+         * Normalizes device data from different sources into a consistent format.
+         */
+        function normalizeDevice(device) {
+            const isExcelFormat = device.hasOwnProperty('System Address ( Node : Card : Device )');
+            if (isExcelFormat) {
+                const systemAddress = device['System Address ( Node : Card : Device )'] || 'N/A:N/A:N/A';
+                const addressParts = String(systemAddress).split(':');
+                return {
+                    loop: addressParts.length > 1 ? addressParts[1].trim() : '',
+                    address: addressParts.length > 2 ? addressParts[2].trim() : '',
+                    systemAddress: systemAddress,
+                    model: device['SKU'] || '',
+                    deviceType: device['SKU Description'] || '',
+                    deviceTypeID: device['Device Type ID'] || '',
+                    serialNumber: device['Serial Number'] || '',
+                    messages: (device['Location Text'] || '').replace(/\n/g, ' '),
+                };
+            } else {
+                // This assumes the original format you had
+                return {
+                    loop: device.loop || '',
+                    address: device.address || '',
+                    systemAddress: '',
+                    model: device.model || '',
+                    deviceType: device.deviceType || '',
+                    deviceTypeID: '',
+                    serialNumber: device.serialNumber || '',
+                    messages: device.messages || '',
+                };
+            }
+        }
+
+        /**
+         * Shows a temporary notification toast.
+         */
+        function showToast(message, type = 'info') {
+            const container = $('#toast-container');
+            if (!container) return;
+            const toastId = `toast-${Date.now()}`;
+            const colors = {
+                success: 'bg-green-500 dark:bg-green-600',
+                error: 'bg-red-500 dark:bg-red-600',
+                info: 'bg-sky-500 dark:bg-sky-600',
+            };
+            const toast = document.createElement('div');
+            toast.id = toastId;
+            toast.className = `transform transition-all duration-300 ease-out translate-y-4 opacity-0 p-4 rounded-lg shadow-lg text-white ${colors[type] || colors.info}`;
+            toast.setAttribute('role', 'alert');
+            toast.innerHTML = `<p class="font-semibold">${escapeHTML(message)}</p>`;
+            container.appendChild(toast);
+            requestAnimationFrame(() => {
+                toast.classList.remove('translate-y-4', 'opacity-0');
+            });
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-x-full');
+                toast.addEventListener('transitionend', () => toast.remove());
+            }, 5000);
+        }
+
+        // --- MODAL LOGIC ---
+        const modal = $('#confirmation-modal');
+        const modalPanel = $('#confirmation-modal-panel');
+        const confirmButton = $('#modal-confirm-button');
+        const cancelButton = $('#modal-cancel-button');
+        const modalMessage = $('#modal-message');
+        let confirmCallback = null;
+        
+        function showConfirmationModal(message, onConfirm) {
+            if (!modal) return;
+            modalMessage.textContent = message;
+            confirmCallback = onConfirm;
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            requestAnimationFrame(() => {
+                modalPanel.classList.remove('opacity-0', 'translate-y-4', 'sm:translate-y-0', 'sm:scale-95');
+            });
+        }
+        
+        function hideConfirmationModal() {
+             if (!modal) return;
+             modalPanel.classList.add('opacity-0', 'translate-y-4', 'sm:translate-y-0', 'sm:scale-95');
+             modal.addEventListener('transitionend', () => {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+             }, { once: true });
+             confirmCallback = null;
+        }
+        confirmButton.addEventListener('click', () => {
+            if (typeof confirmCallback === 'function') confirmCallback();
+            hideConfirmationModal();
+        });
+        cancelButton.addEventListener('click', hideConfirmationModal);
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) hideConfirmationModal();
+        });
+
+        // --- WEB COMPONENTS ---
+        
+        // --- BuildingPicker Web Component ---
+        class BuildingPicker extends HTMLElement {
+            constructor() {
+                super();
+                this.isMobile = window.innerWidth < 640;
+            }
+            connectedCallback() {
+                this.render();
+                window.addEventListener('resize', debounce(() => this.handleResize(), 200));
+            }
+
+            setChecklists(checklists) {
+                this.checklists = checklists;
+                this.render();
+            }
+
+            render() {
+                const containerId = this.isMobile ? '#mobile-building-picker-container' : '#desktop-building-picker-container';
+                const otherContainerId = this.isMobile ? '#desktop-building-picker-container' : '#mobile-building-picker-container';
+                const container = $(containerId);
+                const otherContainer = $(otherContainerId);
+                if (!container) return;
+                
+                container.innerHTML = this.isMobile ? this.getMobileHTML() : this.getDesktopHTML();
+                if (otherContainer) otherContainer.innerHTML = '';
+                this.attachEventListeners();
+            }
+            getMobileHTML() {
+                 if (!this.checklists || this.checklists.length === 0) return `<p class="text-center text-sm text-slate-500">No checklists loaded.</p>`;
+                return `
+                    <label for="building-select" class="sr-only">Select Checklist</label>
+                    <select id="building-select" class="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm py-2 px-3 focus-ring sm:text-sm">
+                        <option value="">-- Select a Checklist --</option>
+                        ${this.checklists.map(c => `<option value="${c.key}">${escapeHTML(c.name)}</option>`).join('')}
+                    </select>
+                `;
+            }
+            getDesktopHTML() {
+                 return `
+                    <div class="sticky top-20">
+                        <div class="bg-white dark:bg-slate-900 rounded-xl shadow p-4">
+                            <h2 class="text-lg font-semibold mb-3">Checklists</h2>
+                             <input type="search" id="building-search" placeholder="Search checklists..." class="mb-3 block w-full bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md shadow-sm py-2 px-3 focus-ring sm:text-sm">
+                            <ul id="building-list" class="space-y-1 max-h-[calc(100vh-12rem)] overflow-y-auto">
+                                ${(!this.checklists || this.checklists.length === 0) ? `<li class="text-sm text-slate-500">No checklists loaded.</li>` : ''}
+                                ${this.checklists?.map(c => `
+                                    <li>
+                                        <a href="#" data-key="${c.key}" class="block p-2 rounded-md hover:bg-sky-100 dark:hover:bg-sky-900/50 focus-ring font-medium text-slate-700 dark:text-slate-300">
+                                            ${escapeHTML(c.name)}
+                                        </a>
+                                    </li>
+                                `).join('') || ''}
+                            </ul>
+                        </div>
+                    </div>
+                `;
+            }
+            attachEventListeners() {
+                const mobileSelect = $('#building-select');
+                if (mobileSelect) mobileSelect.addEventListener('change', (e) => { if (e.target.value) this.selectChecklist(e.target.value); });
+                const desktopList = $('#building-list');
+                if (desktopList) {
+                    desktopList.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        const link = e.target.closest('a');
+                        if (link && link.dataset.key) {
+                            $$('a', desktopList).forEach(a => a.classList.remove('bg-sky-100', 'dark:bg-sky-900/50'));
+                            link.classList.add('bg-sky-100', 'dark:bg-sky-900/50');
+                            this.selectChecklist(link.dataset.key);
+                        }
+                    });
+                }
+                const searchInput = $('#building-search');
+                if (searchInput) searchInput.addEventListener('input', debounce((e) => this.filterChecklists(e.target.value), 200));
+            }
+            filterChecklists(query) {
+                const q = query.toLowerCase();
+                $$('#building-list li').forEach(li => {
+                    const link = li.querySelector('a');
+                    if (link) {
+                        const name = link.textContent.toLowerCase();
+                        li.style.display = name.includes(q) ? '' : 'none';
+                    }
+                });
+            }
+            selectChecklist(key) {
+                document.dispatchEvent(new CustomEvent('checklist-selected', { detail: { key } }));
+            }
+            handleResize() {
+                const newIsMobile = window.innerWidth < 640;
+                if (newIsMobile !== this.isMobile) {
+                    this.isMobile = newIsMobile;
+                    this.render();
+                }
+            }
+        }
+        customElements.define('building-picker', BuildingPicker);
+        
+        
+        // --- ChecklistWorkspace Web Component ---
+        class ChecklistWorkspace extends HTMLElement {
+            constructor() {
+                super();
+                this.checklistKey = null;
+                this.sortState = { key: 'address', dir: 'asc' };
+                this.state = {
+                    checkedDevices: new Set(),
+                    checkHistory: [],
+                };
+                this.handleMenuAction = this.handleMenuAction.bind(this);
+                this.handleSortChange = this.handleSortChange.bind(this);
+            }
+            
+            static get observedAttributes() { return ['building-key']; }
+
+            connectedCallback() {
+                document.addEventListener('request-workspace-action', this.handleMenuAction);
+            }
+
+            disconnectedCallback() {
+                document.removeEventListener('request-workspace-action', this.handleMenuAction);
+            }
+
+            attributeChangedCallback(name, oldValue, newValue) {
+                if (name === 'building-key' && oldValue !== newValue) {
+                    this.checklistKey = newValue;
+                    this.loadChecklist();
+                }
+            }
+            
+            getUniqueDeviceId(device) {
+                return `${this.checklistKey}-${device.serialNumber}-${device.loop}-${device.address}-${device.messages}`;
+            }
+
+            async loadChecklist() {
+                this.innerHTML = `<div class="text-center py-20">Loading checklist...</div>`;
+                try {
+                    const checklistMeta = AppState.checklists.find(c => c.key === this.checklistKey);
+                    if (!checklistMeta || !checklistMeta.filePath) {
+                        throw new Error("Checklist metadata not found or file path is missing.");
+                    }
+
+                    const response = await fetch(checklistMeta.filePath);
+                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                    
+                    const deviceData = await response.json();
+
+                    // The loaded JSON might have a root object containing the devices array
+                    const devices = Array.isArray(deviceData) ? deviceData : (deviceData.devices || []);
+
+                    AppState.activeChecklistData = {
+                        ...checklistMeta,
+                        devices: devices.map(device => normalizeDevice(device))
+                    };
+                    
+                    this.loadInspectedState();
+                    this.render();
+                } catch (error) {
+                    showToast(`Failed to load: ${error.message}`, 'error');
+                    this.innerHTML = `<div class="text-center py-20 text-red-500">Error loading checklist: ${escapeHTML(error.message)}</div>`;
+                    console.error("Failed to load checklist:", error);
+                }
+            }
+            
+            loadInspectedState() {
+                const savedState = localStorage.getItem(`checklistState_${this.checklistKey}`);
+                if (savedState) {
+                    const parsed = JSON.parse(savedState);
+                    this.state.checkedDevices = new Set(parsed.checked || []);
+                    this.state.checkHistory = parsed.history || [];
+                } else {
+                    this.state.checkedDevices.clear();
+                    this.state.checkHistory = [];
+                }
+                this.updateLastCheckedFooter();
+            }
+
+            saveInspectedState() {
+                const appState = {
+                    checked: Array.from(this.state.checkedDevices),
+                    history: this.state.checkHistory
+                };
+                localStorage.setItem(`checklistState_${this.checklistKey}`, JSON.stringify(appState));
+            }
+
+            render() {
+                const data = AppState.activeChecklistData;
+                if (!data) return;
+                this.innerHTML = `
+                    <div class="bg-white dark:bg-slate-900 rounded-xl shadow-lg">
+                        <header class="p-4 sm:p-6 border-b border-slate-200 dark:border-slate-800">
+                           <h2 class="text-2xl sm:text-3xl font-bold tracking-tight">${escapeHTML(data.name)}</h2>
+                           <p class="text-slate-500 dark:text-slate-400">${escapeHTML(data.location)}</p>
+                        </header>
+                        <div id="checklist-content" class="p-2 sm:p-6"></div>
+                    </div>
+                `;
+                this.updateUI();
+                this.attachEventListeners();
+            }
+
+            renderChecklistContent() {
+                const currentSortValue = `${this.sortState.key}-${this.sortState.dir}`;
+                
+                return `
+                    <div class="space-y-4">
+                        <div id="progress-container"></div>
+                        
+                        <!-- Search and Sort Controls -->
+                        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-2 sm:p-0">
+                            <div class="flex-grow">
+                                <label for="search-input" class="sr-only">Search Devices</label>
+                                <input type="search" id="search-input" placeholder="Search all devices..." class="block w-full bg-slate-100 dark:bg-slate-800 border-slate-300 dark:border-slate-700 rounded-md shadow-sm py-2 px-3 focus-ring sm:text-sm">
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <label for="sort-select" class="text-sm font-medium text-slate-600 dark:text-slate-300">Sort by:</label>
+                                <select id="sort-select" class="w-full sm:w-auto bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm py-2 px-3 focus-ring text-sm">
+                                    <option value="address-asc" ${currentSortValue === 'address-asc' ? 'selected' : ''}>Address (Asc)</option>
+                                    <option value="address-desc" ${currentSortValue === 'address-desc' ? 'selected' : ''}>Address (Desc)</option>
+                                    <option value="messages-asc" ${currentSortValue === 'messages-asc' ? 'selected' : ''}>Location (A-Z)</option>
+                                    <option value="messages-desc" ${currentSortValue === 'messages-desc' ? 'selected' : ''}>Location (Z-A)</option>
+                                    <option value="deviceType-asc" ${currentSortValue === 'deviceType-asc' ? 'selected' : ''}>Type (A-Z)</option>
+                                    <option value="deviceType-desc" ${currentSortValue === 'deviceType-desc' ? 'selected' : ''}>Type (Z-A)</option>
+                                    <option value="serialNumber-asc" ${currentSortValue === 'serialNumber-asc' ? 'selected' : ''}>Serial # (Asc)</option>
+                                    <option value="serialNumber-desc" ${currentSortValue === 'serialNumber-desc' ? 'selected' : ''}>Serial # (Desc)</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div id="completed-container"></div>
+                        <div id="active-container"></div>
+                    </div>
+                `;
+            }
+
+            updateProgress() {
+                const container = $(`#progress-container`, this);
+                if (!container || !AppState.activeChecklistData) return;
+                const total = AppState.activeChecklistData.devices.length;
+                const inspectedCount = this.state.checkedDevices.size;
+                const percent = total > 0 ? Math.round((inspectedCount / total) * 100) : 0;
+                container.innerHTML = `
+                    <div class="flex justify-between items-center mb-1 text-sm font-medium px-2 sm:px-0">
+                        <span class="text-slate-600 dark:text-slate-300">Progress</span>
+                        <span>${inspectedCount} / ${total} inspected (${percent}%)</span>
+                    </div>
+                    <div class="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2.5">
+                        <div class="bg-sky-600 h-2.5 rounded-full transition-all duration-500" style="width: ${percent}%"></div>
+                    </div>
+                `;
+            }
+
+            renderTableAndAccordion() {
+                const contentContainer = $('#checklist-content', this);
+                if (!contentContainer || !AppState.activeChecklistData) return;
+                
+                const searchInput = $('#search-input', this);
+                const currentSearchQuery = searchInput ? searchInput.value : '';
+
+                contentContainer.innerHTML = this.renderChecklistContent();
+                
+                let allDevices = [...AppState.activeChecklistData.devices];
+                
+                allDevices.sort((a, b) => {
+                    const key = this.sortState.key;
+                    if (key === 'address' || key === 'loop') {
+                        const valA = parseInt(a[key], 10) || 0;
+                        const valB = parseInt(b[key], 10) || 0;
+                        return this.sortState.dir === 'asc' ? valA - valB : valB - valA;
+                    }
+                    const valA = a[key]?.toString().toLowerCase() || '';
+                    const valB = b[key]?.toString().toLowerCase() || '';
+                    const comparison = valA.localeCompare(valB, undefined, { sensitivity: 'base' });
+                    return this.sortState.dir === 'asc' ? comparison : -comparison;
+                });
+                
+                const inspectedDevices = allDevices.filter(d => this.state.checkedDevices.has(this.getUniqueDeviceId(d)));
+                const activeDevices = allDevices.filter(d => !this.state.checkedDevices.has(this.getUniqueDeviceId(d)));
+                
+                $(`#completed-container`, this).innerHTML = this.renderAccordionHTML(inspectedDevices);
+                $(`#active-container`, this).innerHTML = this.renderListHTML(activeDevices);
+                
+                this.updateProgress();
+
+                const newSearchInput = $('#search-input', this);
+                if (newSearchInput && currentSearchQuery) {
+                    newSearchInput.value = currentSearchQuery;
+                    this.filterTable(currentSearchQuery);
+                }
+            }
+
+            renderAccordionHTML(devices) {
+                if (devices.length === 0) return '';
+                return `
+                    <div class="border border-slate-200 dark:border-slate-800 rounded-lg">
+                        <button aria-expanded="false" aria-controls="completed-list" class="accordion-toggle w-full flex justify-between items-center p-3 font-semibold text-sm bg-slate-100 dark:bg-slate-800/80 rounded-t-lg focus-ring">
+                           <span>Completed Devices (${devices.length})</span>
+                           <svg class="accordion-arrow w-5 h-5 transition-transform" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" /></svg>
+                        </button>
+                        <div id="completed-list" class="hidden">
+                            ${this.renderListHTML(devices, false)}
+                        </div>
+                    </div>
+                `;
+            }
+
+            getSortIcon(key) {
+                if (this.sortState.key !== key) {
+                    return `<svg class="sort-icon inline-block w-4 h-4 ml-1 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l4-4 4 4m0 6l-4 4-4-4"></path></svg>`;
+                }
+                if (this.sortState.dir === 'asc') {
+                    return `<svg class="sort-icon inline-block w-4 h-4 ml-1" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M14.707 12.707a1 1 0 01-1.414 0L10 9.414l-3.293 3.293a1 1 0 01-1.414-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 010 1.414z" clip-rule="evenodd"></path></svg>`;
+                } else {
+                    return `<svg class="sort-icon inline-block w-4 h-4 ml-1" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"></path></svg>`;
+                }
+            }
+            
+            renderListHTML(devices, showHeader = true) {
+                return `
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm text-left">
+                           ${showHeader ? `
+                            <thead class="text-xs text-slate-700 dark:text-slate-300 uppercase bg-slate-50 dark:bg-slate-800 hidden sm:table-header-group">
+                                <tr>
+                                    <th scope="col" class="p-3">Loop</th>
+                                    <th scope="col" class="p-3">Address</th>
+                                    <th scope="col" class="p-3">Location/Message</th>
+                                    <th scope="col" class="p-3">Type</th>
+                                    <th scope="col" class="p-3">Model/SKU</th>
+                                    <th scope="col" class="p-3">Serial #</th>
+                                    <th scope="col" class="p-3 text-center">✅</th>
+                                </tr>
+                            </thead>` : ''}
+                            <tbody class="divide-y divide-slate-200 dark:divide-slate-800">
+                               ${devices.map(d => this.renderRowHTML(d)).join('') || `<tr class="device-row"><td colspan="7" class="p-4 text-center text-slate-500">No devices to show.</td></tr>`}
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+            }
+            
+            renderRowHTML(device) {
+                const uniqueId = this.getUniqueDeviceId(device);
+                const isInspected = this.state.checkedDevices.has(uniqueId);
+                
+                return `
+                    <tr data-device-id="${uniqueId}" class="device-row block sm:table-row cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 ${isInspected ? 'bg-slate-100/50 dark:bg-slate-800/20 opacity-70' : ''}">
+                        
+                        <!-- Mobile Card View -->
+                        <td class="sm:hidden w-full p-3">
+                            <div class="flex items-center justify-between gap-3 w-full">
+                                <div class="flex-grow space-y-3">
+                                    <div class="flex items-start gap-3">
+                                        <div class="flex-shrink-0 bg-slate-100 dark:bg-slate-800 rounded-md p-2 text-center w-20">
+                                            <p class="text-xs text-slate-500 dark:text-slate-400 font-medium">Loop</p>
+                                            <p class="font-black text-xl text-slate-800 dark:text-slate-200">${escapeHTML(device.loop) || 'N/A'}</p>
+                                            <hr class="border-slate-300 dark:border-slate-600 my-1">
+                                            <p class="text-xs text-slate-500 dark:text-slate-400 font-medium">Address</p>
+                                            <p class="font-black text-xl text-slate-800 dark:text-slate-200">${escapeHTML(device.address) || 'N/A'}</p>
+                                        </div>
+                                        <div class="flex-grow pt-1">
+                                            <p class="font-semibold text-slate-800 dark:text-slate-100 leading-tight">${escapeHTML(device.messages)}</p>
+                                            <p class="text-sm text-slate-600 dark:text-slate-400">${escapeHTML(device.deviceType)}</p>
+                                        </div>
+                                    </div>
+                                    <dl class="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-slate-500 dark:text-slate-400 pl-1">
+                                        <dt class="font-medium text-slate-600 dark:text-slate-300 col-span-1">Serial #:</dt>
+                                        <dd class="truncate col-span-1">${escapeHTML(device.serialNumber) || 'N/A'}</dd>
+                                        <dt class="font-medium text-slate-600 dark:text-slate-300 col-span-1">Model/SKU:</dt>
+                                        <dd class="truncate col-span-1">${escapeHTML(device.model) || 'N/A'}</dd>
+                                        <dt class="font-medium text-slate-600 dark:text-slate-300 col-span-1">Sys. Address:</dt>
+                                        <dd class="col-span-1">${escapeHTML(device.systemAddress) || 'N/A'}</dd>
+                                        <dt class="font-medium text-slate-600 dark:text-slate-300 col-span-1">Type ID:</dt>
+                                        <dd class="col-span-1">${escapeHTML(device.deviceTypeID) || 'N/A'}</dd>
+                                    </dl>
+                                </div>
+                                <div class="flex-shrink-0">
+                                    <input type="checkbox" data-device-id="${uniqueId}" class="h-8 w-8 rounded-md border-slate-400 text-sky-600 focus-ring pointer-events-none" ${isInspected ? 'checked' : ''} tabindex="-1">
+                                </div>
+                            </div>
+                        </td>
+
+                        <!-- Desktop Table Cells -->
+                        <td class="hidden sm:table-cell p-3 font-medium whitespace-nowrap">${escapeHTML(device.loop)}</td>
+                        <td class="hidden sm:table-cell p-3 font-medium whitespace-nowrap">${escapeHTML(device.address)}</td>
+                        <td class="hidden sm:table-cell p-3 max-w-sm truncate" title="${escapeHTML(device.messages)}">${escapeHTML(device.messages)}</td>
+                        <td class="hidden sm:table-cell p-3 max-w-xs truncate" title="${escapeHTML(device.deviceType)}">${escapeHTML(device.deviceType)}</td>
+                        <td class="hidden sm:table-cell p-3 whitespace-nowrap">${escapeHTML(device.model)}</td>
+                        <td class="hidden sm:table-cell p-3 whitespace-nowrap">${escapeHTML(device.serialNumber)}</td>
+                        <td class="hidden sm:table-cell p-3 text-center">
+                            <input type="checkbox" data-device-id="${uniqueId}" class="h-5 w-5 rounded border-slate-300 text-sky-600 focus-ring pointer-events-none" ${isInspected ? 'checked' : ''} tabindex="-1">
+                        </td>
+                    </tr>
+                `;
+            }
+
+            attachEventListeners() {
+                this.addEventListener('click', (e) => {
+                    const row = e.target.closest('.device-row');
+                    const accordionToggle = e.target.closest('.accordion-toggle');
+                    if (accordionToggle) {
+                        const content = this.querySelector(`#${accordionToggle.getAttribute('aria-controls')}`);
+                        const isExpanded = accordionToggle.getAttribute('aria-expanded') === 'true';
+                        accordionToggle.setAttribute('aria-expanded', String(!isExpanded));
+                        if(content) content.classList.toggle('hidden');
+                        return;
+                    }
+                    if (row) {
+                        this.handleRowClick(row);
+                        return;
+                    }
+                });
+                
+                this.addEventListener('input', debounce((e) => {
+                    if (e.target.id === 'search-input') this.filterTable(e.target.value);
+                }, 250));
+
+                this.addEventListener('change', this.handleSortChange);
+            }
+
+            handleMenuAction(event) {
+                const { action } = event.detail;
+                this.handleGlobalAction(action);
+            }
+            
+            handleSortChange(event) {
+                if (event.target.id !== 'sort-select') return;
+                const [key, dir] = event.target.value.split('-');
+                this.sortState = { key, dir };
+                this.updateUI();
+            }
+
+            handleRowClick(row) {
+                const { deviceId } = row.dataset;
+                const checkboxes = row.querySelectorAll(`input[data-device-id="${deviceId}"]`);
+                if (checkboxes.length === 0) return;
+
+                const isInspected = !checkboxes[0].checked;
+                
+                if (isInspected) {
+                    this.state.checkedDevices.add(deviceId);
+                    this.state.checkHistory.push(deviceId);
+                } else {
+                    this.state.checkedDevices.delete(deviceId);
+                    const historyIndex = this.state.checkHistory.lastIndexOf(deviceId);
+                    if (historyIndex > -1) this.state.checkHistory.splice(historyIndex, 1);
+                }
+                
+                row.classList.add('flash-bg');
+                row.addEventListener('animationend', () => row.classList.remove('flash-bg'), { once: true });
+
+                this.saveInspectedState();
+                this.updateUI();
+                this.updateLastCheckedFooter();
+            }
+
+            handleGlobalAction(action) {
+                if (action === 'clear-all') {
+                    showConfirmationModal(
+                        "Are you sure you want to clear all inspection checkmarks for this list? This cannot be undone.",
+                        () => { 
+                            this.state.checkedDevices.clear();
+                            this.state.checkHistory = [];
+                            showToast('All checks cleared.', 'info');
+                            this.saveInspectedState();
+                            this.updateLastCheckedFooter();
+                            this.updateUI();
+                        }
+                    );
+                    return;
+                }
+
+                if (action === 'undo') {
+                    if (this.state.checkHistory.length === 0) {
+                        showToast('No actions to undo.', 'info');
+                        return;
+                    }
+                    const lastCheckedId = this.state.checkHistory.pop();
+                    this.state.checkedDevices.delete(lastCheckedId);
+                    const device = AppState.activeChecklistData.devices.find(d => this.getUniqueDeviceId(d) === lastCheckedId);
+                    if (device) {
+                        showToast(`Undo: Unchecked "${device.messages}"`, 'info');
+                    }
+                }
+                
+                if (action === 'export') {
+                    this.exportInspectedList();
+                    return;
+                }
+                
+                this.saveInspectedState();
+                this.updateLastCheckedFooter();
+                this.updateUI();
+            }
+            
+            exportInspectedList() {
+                const inspectedDevices = AppState.activeChecklistData.devices.filter(d => this.state.checkedDevices.has(this.getUniqueDeviceId(d)));
+                if(inspectedDevices.length === 0) {
+                    showToast('No inspected devices to export.', 'info');
+                    return;
+                }
+                const data = JSON.stringify({
+                    checklistName: AppState.activeChecklistData.name,
+                    exportDate: new Date().toISOString(),
+                    inspectedCount: inspectedDevices.length,
+                    devices: inspectedDevices
+                }, null, 2);
+                const blob = new Blob([data], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `${this.checklistKey}-inspected-${new Date().toISOString().slice(0,10)}.json`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                showToast('Exported inspected list as JSON.', 'success');
+            }
+            
+            filterTable(query) {
+                const q = query.toLowerCase().trim();
+                $$('.device-row', this).forEach(row => {
+                    if (!q) {
+                         row.style.display = window.innerWidth >= 640 ? 'table-row' : 'block';
+                        return;
+                    }
+                    const textContent = row.textContent.toLowerCase();
+                    const shouldShow = textContent.includes(q);
+                    
+                    if (window.innerWidth >= 640) {
+                        row.style.display = shouldShow ? 'table-row' : 'none';
+                    } else {
+                         row.style.display = shouldShow ? 'block' : 'none';
+                    }
+                });
+            }
+            
+            updateUI() {
+                this.renderTableAndAccordion();
+            }
+            
+            updateLastCheckedFooter() {
+                const footer = $('#last-checked-footer');
+                const footerText = $('#last-checked-text');
+                if (this.state.checkHistory.length > 0) {
+                    const lastCheckedId = this.state.checkHistory[this.state.checkHistory.length - 1];
+                    const device = AppState.activeChecklistData?.devices.find(d => this.getUniqueDeviceId(d) === lastCheckedId);
+                    if (device && footerText) {
+                        const idText = device.systemAddress ? device.systemAddress : (device.loop !== 'N/A' ? `L${device.loop}/A${device.address}` : `${device.deviceType} ${device.address}`);
+                        footerText.textContent = ` ${idText}: ${device.messages}`;
+                        footer.classList.remove('hidden');
+                    }
+                } else {
+                    if (footer) footer.classList.add('hidden');
+                }
+            }
+        }
+        customElements.define('checklist-workspace', ChecklistWorkspace);
+
+        // --- APP INITIALIZATION ---
+        async function initializeApp() {
+            // Setup Building Pickers
+            const mobilePickerContainer = $('#mobile-building-picker-container');
+            const desktopPickerContainer = $('#desktop-building-picker-container');
+            mobilePickerContainer.appendChild(document.createElement('building-picker'));
+            desktopPickerContainer.appendChild(document.createElement('building-picker'));
+            
+            // Handle Checklist Selection
+            document.addEventListener('checklist-selected', (e) => {
+                const { key } = e.detail;
+                AppState.activeChecklistKey = key;
+                const workspaceContainer = $('#checklist-workspace');
+                $('#welcome-message')?.remove();
+                let workspace = $('checklist-workspace', workspaceContainer);
+                if (!workspace) {
+                    workspace = document.createElement('checklist-workspace');
+                    workspaceContainer.innerHTML = '';
+                    workspaceContainer.appendChild(workspace);
+                }
+                workspace.setAttribute('building-key', key);
+
+                $('#header-menu-container').classList.remove('invisible', 'opacity-50');
+                $('#menu-toggle-button').disabled = false;
+            });
+
+            // --- HEADER MENU LOGIC ---
+            const menuContainer = $('#header-menu-container');
+            const menuButton = $('#menu-toggle-button');
+            const menuDropdown = $('#menu-dropdown');
+            
+            menuContainer.classList.add('invisible', 'opacity-50');
+            menuButton.disabled = true;
+
+            function toggleMenu(show) {
+                const isVisible = !menuDropdown.classList.contains('hidden');
+                if (typeof show !== 'boolean') show = !isVisible;
+                menuDropdown.classList.toggle('hidden', !show);
+                menuButton.setAttribute('aria-expanded', show);
+            }
+
+            menuButton.addEventListener('click', (e) => {
+                e.stopPropagation();
+                toggleMenu();
+            });
+
+            menuDropdown.addEventListener('click', (e) => {
+                const action = e.target.closest('[data-menu-action]')?.dataset.menuAction;
+                if (action) {
+                    e.preventDefault();
+                    document.dispatchEvent(new CustomEvent('request-workspace-action', { detail: { action } }));
+                    toggleMenu(false);
+                }
+            });
+
+            window.addEventListener('click', (e) => {
+                if (!menuContainer.contains(e.target)) toggleMenu(false);
+            });
+            window.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && !menuDropdown.classList.contains('hidden')) toggleMenu(false);
+            });
+
+            // --- DATA FETCHING ---
+            try {
+                // In your GitHub repo, create a `checklists.json` file in the same directory as your index.html
+                // It should look like this:
+                // [
+                //   {
+                //     "key": "mcfarland_psc",
+                //     "name": "McFarland Public Safety Center",
+                //     "location": "Fire Alarm Device Inspection",
+                //     "filePath": "./mcfarland_psc.json"
+                //   },
+                //   {
+                //     "key": "purina_facility",
+                //     "name": "Purina Facility",
+                //     "location": "Device List Report",
+                //     "filePath": "./purina_facility.json"
+                //   }
+                // ]
+                // Then create the .json files for each checklist (e.g., mcfarland_psc.json).
+                // The content of that file should be an array of device objects.
+                const response = await fetch('./checklists.json');
+                if (!response.ok) {
+                    throw new Error(`Could not load checklists.json (Status: ${response.status})`);
+                }
+                AppState.checklists = await response.json();
+                
+                $$('building-picker').forEach(picker => picker.setChecklists(AppState.checklists));
+
+            } catch(error) {
+                console.error("Initialization Error:", error);
+                const errorDiv = $('#loading-error-message');
+                errorDiv.textContent = `Error: ${error.message}. Please ensure 'checklists.json' exists and is correctly formatted.`;
+                errorDiv.classList.remove('hidden');
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', initializeApp);
+    </script>
+
+</body>
+</html>
